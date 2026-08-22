@@ -109,3 +109,5 @@ DROP TRIGGER IF EXISTS set_updated_at_payroll ON public.payroll;
 CREATE TRIGGER set_updated_at_payroll
     BEFORE UPDATE ON public.payroll
     FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+    
