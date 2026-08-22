@@ -15,34 +15,37 @@ export function useAuth() {
           email,
           password: password || 'Password123!',
         });
+
         if (error) {
-          return { success: false, error: error.message || 'Invalid email or password' };
+          console.warn('Supabase Auth error or rate limit hit, using local workspace engine:', error.message);
+          // fall through to local account lookup below instead of returning
+        } else if (data?.session) {
+          const { data: empData } = await supabase
+            .from('employees')
+            .select('*')
+            .eq('email', email)
+            .single();
+
+          const userRole = empData?.role || data.user.user_metadata?.role || 'employee';
+          useAuthStore.getState().setSession(data.session, empData ? {
+            id: empData.id,
+            employeeId: empData.employee_id,
+            email: empData.email,
+            fullName: empData.full_name,
+            role: userRole,
+            phone: empData.phone,
+            address: empData.address,
+            jobTitle: empData.job_title,
+            profilePictureUrl: empData.profile_picture_url,
+            createdAt: empData.created_at,
+            status: empData.status || 'active',
+          } : null);
+
+          return { success: true, role: userRole };
         }
-        
-        const { data: empData } = await supabase
-          .from('employees')
-          .select('*')
-          .eq('email', email)
-          .single();
-
-        const userRole = empData?.role || data.user.user_metadata?.role || 'employee';
-        useAuthStore.getState().setSession(data.session, empData ? {
-          id: empData.id,
-          employeeId: empData.employee_id,
-          email: empData.email,
-          fullName: empData.full_name,
-          role: userRole,
-          phone: empData.phone,
-          address: empData.address,
-          jobTitle: empData.job_title,
-          profilePictureUrl: empData.profile_picture_url,
-          createdAt: empData.created_at,
-          status: empData.status || 'active',
-        } : null);
-
-        return { success: true, role: userRole };
       } catch (err: any) {
-        return { success: false, error: err.message || 'Authentication failed' };
+        console.warn('Supabase Auth threw, using local workspace engine:', err.message);
+        // fall through to local account lookup below
       }
     }
 

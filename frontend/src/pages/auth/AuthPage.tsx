@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { SignInForm } from '../../components/auth/SignInForm';
 import { SignUpForm } from '../../components/auth/SignUpForm';
 import { ShieldCheck, Sparkles, RefreshCw } from 'lucide-react';

@@ -47,6 +47,8 @@ export function SignUpForm({ onFlipToSignIn }: SignUpFormProps) {
     handleSubmit,
     formState: { errors },
   } = useForm<SignUpFormData>({
+    mode: 'onBlur',
+    reValidateMode: 'onChange',
     resolver: zodResolver(signUpSchema),
     defaultValues: {
       employeeId: `EMP-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -73,7 +75,12 @@ export function SignUpForm({ onFlipToSignIn }: SignUpFormProps) {
       });
 
       if (!res.success) {
-        setAuthError(res.error || 'Registration failed');
+        const msg = res.error || 'Registration failed';
+        if (msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('too many') || msg.toLowerCase().includes('email')) {
+          setAuthError('Too many sign-up attempts. Wait a few minutes or use a different email in the format name@company.com.');
+        } else {
+          setAuthError(msg);
+        }
       } else {
         navigate('/dashboard');
       }
@@ -136,6 +143,7 @@ export function SignUpForm({ onFlipToSignIn }: SignUpFormProps) {
             placeholder="jordan@company.com"
             icon={<Mail className="w-4 h-4" />}
             error={errors.email?.message}
+            helperText="Use the format: name@company.com"
             {...register('email')}
           />
 

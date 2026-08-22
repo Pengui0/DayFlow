@@ -36,8 +36,8 @@ export function SignInForm({ onFlipToSignUp }: SignInFormProps) {
   } = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
     defaultValues: {
-      email: employees[0]?.email || 'admin@dayflow.io',
-      password: 'Password123!',
+      email: 'admin@dayflow.io',
+      password: 'Admin123',
     },
   });
 
