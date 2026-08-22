@@ -1,4 +1,8 @@
-﻿node_modules
+﻿__pycache__/
+*.py[cod]
+*$py.class
 .env
-__pycache__/
-*.pyc
+.venv/
+env/
+venv/
+.pytest_cache/
