@@ -1,6 +1,4 @@
 {
   "name": "Dayflow HRMS",
-  "description": "Next-generation Human Resource Management System with attendance tracking, leave management, payroll, and analytics.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "description": "Human Resource Management System with attendance tracking, leave management, payroll, and analytics."
 }
