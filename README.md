@@ -51,3 +51,5 @@ Run these in the Supabase SQL Editor, in order:
 ## Contributors
 - [Pengui0](https://github.com/Pengui0)
 - [bheemanapallibhuvan-ai](https://github.com/bheemanapallibhuvan-ai)
+- Rithvik Krishna Dusa
+- Yogi Karthik
