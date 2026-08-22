@@ -28,6 +28,7 @@ export function Topbar({ isCollapsed }: TopbarProps) {
   const [time, setTime] = useState(new Date());
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const interval = setInterval(() => setTime(new Date()), 1000);
@@ -35,6 +36,14 @@ export function Topbar({ isCollapsed }: TopbarProps) {
   }, []);
 
   const pendingLeaves = leaveRequests.filter((r) => r.status === 'pending');
+  const filteredMatches = searchQuery.trim()
+    ? employees.filter(
+        (emp) =>
+          emp.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          emp.employeeId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          emp.jobTitle.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : [];
 
   return (
     <header
@@ -49,9 +58,39 @@ export function Topbar({ isCollapsed }: TopbarProps) {
           <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search records, staff..."
             className="w-full bg-zinc-50 border border-zinc-200/80 rounded-2xl pl-9 pr-3.5 py-1.5 text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-300"
           />
+
+          {searchQuery.trim() && (
+            <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] bg-white border border-zinc-200 rounded-2xl shadow-xl z-50 overflow-hidden">
+              {filteredMatches.length === 0 ? (
+                <div className="px-3 py-2 text-[11px] text-zinc-500">No matching employee found.</div>
+              ) : (
+                filteredMatches.slice(0, 5).map((emp) => (
+                  <button
+                    key={emp.id}
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      navigate(`/employees`);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-zinc-50 transition-colors"
+                  >
+                    <div className="w-6 h-6 rounded-full bg-zinc-900 text-white text-[9px] flex items-center justify-center font-bold">
+                      {getInitials(emp.fullName)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-semibold text-zinc-900 truncate">{emp.fullName}</p>
+                      <p className="text-[10px] text-zinc-400 truncate">{emp.jobTitle}</p>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
         </div>
 
         {/* Live clock pill */}

@@ -6,7 +6,7 @@ import { Mail, Lock, Eye, EyeOff, ShieldCheck, User, ArrowRight } from 'lucide-r
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useAuth } from '../../hooks/useAuth';
-import { useAppDataStore } from '../../store/dataStore';
+import { useAuthStore as useAuthStoreDirect } from '../../store/authStore';import { useAppDataStore } from '../../store/dataStore';
 import { useNavigate } from 'react-router-dom';
 
 const signInSchema = z.object({
@@ -63,20 +63,16 @@ export function SignInForm({ onFlipToSignUp }: SignInFormProps) {
     setAuthError(null);
     try {
       const email = role === 'admin' ? 'admin@dayflow.io' : 'employee@dayflow.io';
-      const fullName = role === 'admin' ? 'Admin Officer' : 'Team Associate';
-      
-      const res = await signUp({
-        email,
-        fullName,
-        role,
-        department: role === 'admin' ? 'People Operations' : 'Engineering',
-        jobTitle: role === 'admin' ? 'HR Administrator' : 'Software Engineer',
-      });
+      const matched = employees.find((e) => e.email.toLowerCase() === email.toLowerCase());
 
-      if (res.success) {
+      if (matched) {
+        useAuthStoreDirect.getState().setSession(
+          { access_token: `token-${matched.id}`, user: matched },
+          matched
+        );
         navigate('/dashboard');
       } else {
-        setAuthError(res.error || 'Failed to start workspace');
+        setAuthError('Demo account not found locally');
       }
     } catch (err) {
       setAuthError('Could not start workspace');

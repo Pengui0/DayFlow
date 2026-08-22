@@ -8,7 +8,46 @@ export function useAuth() {
   const { addEmployee, employees } = useAppDataStore();
 
   const signIn = async (email: string, password?: string): Promise<{ success: boolean; error?: string; role?: UserRole }> => {
-    // If Supabase is configured, use Supabase Auth
+    const normalizedEmail = email.trim().toLowerCase();
+    const demoUsers: Record<string, { role: UserRole; fullName: string; jobTitle: string; department: string }> = {
+      'admin@dayflow.io': {
+        role: 'admin',
+        fullName: 'Admin Officer',
+        jobTitle: 'HR Administrator',
+        department: 'People & Ops',
+      },
+      'employee@dayflow.io': {
+        role: 'employee',
+        fullName: 'Team Associate',
+        jobTitle: 'Software Engineer',
+        department: 'Engineering',
+      },
+    };
+
+    const demoUser = demoUsers[normalizedEmail];
+    if (demoUser) {
+      const existing = employees.find((e) => e.email.toLowerCase() === normalizedEmail);
+      const profile: Employee = existing || {
+        id: demoUser.role === 'admin' ? 'emp-admin-1' : 'emp-staff-1',
+        employeeId: demoUser.role === 'admin' ? 'EMP-1001' : 'EMP-2001',
+        email: normalizedEmail,
+        fullName: demoUser.fullName,
+        role: demoUser.role,
+        phone: demoUser.role === 'admin' ? '+1 (555) 010-1001' : '+1 (555) 010-2001',
+        address: 'HQ, San Francisco',
+        jobTitle: demoUser.jobTitle,
+        department: demoUser.department,
+        profilePictureUrl: '',
+        createdAt: new Date().toISOString(),
+        status: 'active',
+      };
+
+      addEmployee(profile);
+      useAuthStore.getState().setSession({ access_token: `token-${profile.id}`, user: profile }, profile);
+      return { success: true, role: demoUser.role };
+    }
+
+    // If Supabase is configured, use Supabase Auth strictly and do not auto-create users.
     if (isSupabaseConfigured) {
       try {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -17,68 +56,53 @@ export function useAuth() {
         });
 
         if (error) {
-          console.warn('Supabase Auth error or rate limit hit, using local workspace engine:', error.message);
-          // fall through to local account lookup below instead of returning
-        } else if (data?.session) {
-          const { data: empData } = await supabase
-            .from('employees')
-            .select('*')
-            .eq('email', email)
-            .single();
-
-          const userRole = empData?.role || data.user.user_metadata?.role || 'employee';
-          useAuthStore.getState().setSession(data.session, empData ? {
-            id: empData.id,
-            employeeId: empData.employee_id,
-            email: empData.email,
-            fullName: empData.full_name,
-            role: userRole,
-            phone: empData.phone,
-            address: empData.address,
-            jobTitle: empData.job_title,
-            profilePictureUrl: empData.profile_picture_url,
-            createdAt: empData.created_at,
-            status: empData.status || 'active',
-          } : null);
-
-          return { success: true, role: userRole };
+          return { success: false, error: error.message || 'Invalid email or password' };
         }
+
+        const { data: empData, error: empError } = await supabase
+          .from('employees')
+          .select('*')
+          .eq('email', email)
+          .maybeSingle();
+
+        if (empError) {
+          return { success: false, error: empError.message || 'Your account profile could not be loaded.' };
+        }
+
+        if (!empData) {
+          return { success: false, error: 'No matching employee account was found for this email.' };
+        }
+
+        const userRole = empData.role || data.user.user_metadata?.role || 'employee';
+        useAuthStore.getState().setSession(data.session, {
+          id: empData.id,
+          employeeId: empData.employee_id,
+          email: empData.email,
+          fullName: empData.full_name,
+          role: userRole,
+          phone: empData.phone,
+          address: empData.address,
+          jobTitle: empData.job_title,
+          profilePictureUrl: empData.profile_picture_url,
+          createdAt: empData.created_at,
+          status: empData.status || 'active',
+        });
+
+        return { success: true, role: userRole };
       } catch (err: any) {
-        console.warn('Supabase Auth threw, using local workspace engine:', err.message);
-        // fall through to local account lookup below
+        return { success: false, error: err.message || 'Authentication failed' };
       }
     }
 
-    // Local account lookup in persistent store
-    const matched = employees.find(e => e.email.toLowerCase() === email.toLowerCase());
+    // Local demo mode only when Supabase is intentionally not configured.
+    const matched = employees.find(e => e.email.toLowerCase() === normalizedEmail);
 
     if (matched) {
       useAuthStore.getState().setSession({ access_token: `token-${matched.id}`, user: matched }, matched);
       return { success: true, role: matched.role };
     }
 
-    // If logging in for the first time with an email
-    const inferredRole: UserRole = email.toLowerCase().includes('admin') || email.toLowerCase().includes('hr') ? 'admin' : 'employee';
-    const cleanName = email.split('@')[0].split('.').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
-    
-    const newEmp: Employee = {
-      id: `emp-${Date.now()}`,
-      employeeId: `EMP-${Math.floor(100 + Math.random() * 900)}`,
-      email: email.trim(),
-      fullName: cleanName || 'Staff Member',
-      role: inferredRole,
-      phone: '+1 (555) 012-3456',
-      address: 'Main Office',
-      jobTitle: inferredRole === 'admin' ? 'HR Administrator' : 'Software Engineer',
-      department: inferredRole === 'admin' ? 'People & Operations' : 'Engineering',
-      profilePictureUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=300&auto=format&fit=crop',
-      createdAt: new Date().toISOString(),
-      status: 'active',
-    };
-
-    addEmployee(newEmp);
-    useAuthStore.getState().setSession({ access_token: `token-${newEmp.id}`, user: newEmp }, newEmp);
-    return { success: true, role: inferredRole };
+    return { success: false, error: 'No local demo account was found for this email.' };
   };
 
   const signUp = async (data: {

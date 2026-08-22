@@ -6,6 +6,37 @@ import { LeaveRequest } from '../types/leave';
 import { PayrollRecord } from '../types/payroll';
 import { format } from 'date-fns';
 
+const seedEmployees: Employee[] = [
+  {
+    id: 'emp-admin-1',
+    employeeId: 'EMP-1001',
+    email: 'admin@dayflow.io',
+    fullName: 'Admin Officer',
+    role: 'admin',
+    phone: '+1 (555) 010-1001',
+    address: 'HQ, San Francisco',
+    jobTitle: 'HR Administrator',
+    department: 'People & Ops',
+    profilePictureUrl: '',
+    createdAt: new Date().toISOString(),
+    status: 'active',
+  },
+  {
+    id: 'emp-staff-1',
+    employeeId: 'EMP-2001',
+    email: 'employee@dayflow.io',
+    fullName: 'Team Associate',
+    role: 'employee',
+    phone: '+1 (555) 010-2001',
+    address: 'HQ, San Francisco',
+    jobTitle: 'Software Engineer',
+    department: 'Engineering',
+    profilePictureUrl: '',
+    createdAt: new Date().toISOString(),
+    status: 'active',
+  },
+];
+
 interface AppDataState {
   employees: Employee[];
   attendance: AttendanceRecord[];
@@ -35,7 +66,7 @@ interface AppDataState {
 export const useAppDataStore = create<AppDataState>()(
   persist(
     (set, get) => ({
-      employees: [],
+      employees: seedEmployees,
       attendance: [],
       leaveRequests: [],
       payroll: [],
