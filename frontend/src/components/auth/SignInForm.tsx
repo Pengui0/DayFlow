@@ -2,84 +2,83 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Mail, Lock, Eye, EyeOff, ShieldCheck, User, ArrowRight } from 'lucide-react';
+import { Mail, Lock, User, IdCard, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { Select } from '../ui/Select';
 import { useAuth } from '../../hooks/useAuth';
-import { useAppDataStore } from '../../store/dataStore';
 import { useNavigate } from 'react-router-dom';
 
-const signInSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(1, 'Password is required'),
-});
+const signUpSchema = z
+  .object({
+    employeeId: z
+      .string()
+      .min(3, 'Employee ID must be at least 3 characters')
+      .regex(/^[A-Za-z0-9-_]+$/, 'Only letters, numbers, and hyphens allowed'),
+    fullName: z.string().min(2, 'Please enter your full name'),
+    email: z.string().email('Please enter a valid email address'),
+    department: z.string().min(2, 'Department is required'),
+    role: z.enum(['employee', 'admin']),
+    password: z
+      .string()
+      .min(6, 'Password must be at least 6 characters'),
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
 
-type SignInFormData = z.infer<typeof signInSchema>;
+type SignUpFormData = z.infer<typeof signUpSchema>;
 
-interface SignInFormProps {
-  onFlipToSignUp: () => void;
+interface SignUpFormProps {
+  onFlipToSignIn: () => void;
 }
 
-export function SignInForm({ onFlipToSignUp }: SignInFormProps) {
+export function SignUpForm({ onFlipToSignIn }: SignUpFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
-  const { employees } = useAppDataStore();
+  const { signUp } = useAuth();
   const navigate = useNavigate();
 
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors },
-  } = useForm<SignInFormData>({
-    resolver: zodResolver(signInSchema),
+  } = useForm<SignUpFormData>({
+    resolver: zodResolver(signUpSchema),
     defaultValues: {
-      email: employees[0]?.email || 'admin@dayflow.io',
-      password: 'Password123!',
+      employeeId: `EMP-${Math.floor(1000 + Math.random() * 9000)}`,
+      role: 'admin',
+      fullName: '',
+      email: '',
+      department: 'Engineering',
+      password: '',
+      confirmPassword: '',
     },
   });
 
-  const onSubmit = async (data: SignInFormData) => {
+  const onSubmit = async (data: SignUpFormData) => {
     setAuthError(null);
     setIsLoading(true);
     try {
-      const res = await signIn(data.email, data.password);
+      const res = await signUp({
+        employeeId: data.employeeId,
+        email: data.email,
+        password: data.password,
+        fullName: data.fullName,
+        role: data.role,
+        department: data.department,
+      });
+
       if (!res.success) {
-        setAuthError(res.error || 'Invalid email or password');
+        setAuthError(res.error || 'Registration failed');
       } else {
         navigate('/dashboard');
       }
     } catch (err: any) {
-      setAuthError('An unexpected error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleQuickRoleStart = async (role: 'admin' | 'employee') => {
-    setIsLoading(true);
-    setAuthError(null);
-    try {
-      const email = role === 'admin' ? 'admin@dayflow.io' : 'employee@dayflow.io';
-      const fullName = role === 'admin' ? 'Admin Officer' : 'Team Associate';
-      
-      const res = await signUp({
-        email,
-        fullName,
-        role,
-        department: role === 'admin' ? 'People Operations' : 'Engineering',
-        jobTitle: role === 'admin' ? 'HR Administrator' : 'Software Engineer',
-      });
-
-      if (res.success) {
-        navigate('/dashboard');
-      } else {
-        setAuthError(res.error || 'Failed to start workspace');
-      }
-    } catch (err) {
-      setAuthError('Could not start workspace');
+      setAuthError('An unexpected error occurred during registration.');
     } finally {
       setIsLoading(false);
     }
@@ -87,120 +86,116 @@ export function SignInForm({ onFlipToSignUp }: SignInFormProps) {
 
   return (
     <div className="w-full">
-      <div className="mb-5 text-center">
+      <div className="mb-4 text-center">
         <h2 className="text-xl font-bold text-zinc-900 tracking-tight">
-          Welcome to Dayflow
+          Create Account
         </h2>
         <p className="text-xs text-zinc-500 mt-1">
-          Sign in to your workplace console
+          Set up your profile to enter Dayflow
         </p>
       </div>
 
       {authError && (
-        <div className="mb-4 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs font-medium text-rose-600 text-center animate-in fade-in">
+        <div className="mb-3 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs font-medium text-rose-600 text-center animate-in fade-in">
           {authError}
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
-        <Input
-          label="Work Email"
-          type="email"
-          placeholder="name@company.com"
-          icon={<Mail className="w-4 h-4" />}
-          error={errors.email?.message}
-          {...register('email')}
-        />
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+        <div className="grid grid-cols-2 gap-2.5">
+          <Input
+            label="Employee ID"
+            placeholder="EMP-1001"
+            icon={<IdCard className="w-4 h-4" />}
+            error={errors.employeeId?.message}
+            {...register('employeeId')}
+          />
+
+          <Select
+            label="Role Designation"
+            error={errors.role?.message}
+            {...register('role')}
+          >
+            <option value="admin">HR Admin</option>
+            <option value="employee">Staff Member</option>
+          </Select>
+        </div>
 
         <Input
-          label="Password"
-          type={showPassword ? 'text' : 'password'}
-          placeholder="••••••••"
-          icon={<Lock className="w-4 h-4" />}
-          error={errors.password?.message}
-          rightElement={
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="hover:text-zinc-600 transition-colors p-1"
-            >
-              {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-            </button>
-          }
-          {...register('password')}
+          label="Full Name"
+          placeholder="Jordan Miller"
+          icon={<User className="w-4 h-4" />}
+          error={errors.fullName?.message}
+          {...register('fullName')}
         />
 
-        <div className="flex items-center justify-between text-xs pt-0.5">
-          <label className="flex items-center gap-1.5 cursor-pointer text-zinc-500 select-none">
-            <input
-              type="checkbox"
-              defaultChecked
-              className="w-3.5 h-3.5 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-400"
-            />
-            Remember me
-          </label>
+        <div className="grid grid-cols-2 gap-2.5">
+          <Input
+            label="Company Email"
+            type="email"
+            placeholder="jordan@company.com"
+            icon={<Mail className="w-4 h-4" />}
+            error={errors.email?.message}
+            {...register('email')}
+          />
+
+          <Input
+            label="Department"
+            placeholder="Engineering"
+            error={errors.department?.message}
+            {...register('department')}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-2.5">
+          <Input
+            label="Password"
+            type={showPassword ? 'text' : 'password'}
+            placeholder="••••••••"
+            icon={<Lock className="w-4 h-4" />}
+            error={errors.password?.message}
+            rightElement={
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="hover:text-zinc-600 transition-colors p-1"
+              >
+                {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              </button>
+            }
+            {...register('password')}
+          />
+
+          <Input
+            label="Confirm Password"
+            type={showPassword ? 'text' : 'password'}
+            placeholder="••••••••"
+            icon={<Lock className="w-4 h-4" />}
+            error={errors.confirmPassword?.message}
+            {...register('confirmPassword')}
+          />
         </div>
 
         <Button
           type="submit"
           variant="primary"
           size="lg"
-          className="w-full mt-1.5"
+          className="w-full mt-2"
           isLoading={isLoading}
         >
-          Sign In
-          <ArrowRight className="w-4 h-4 ml-1.5" />
+          Complete Setup
         </Button>
       </form>
 
-      {/* Quick Starter Roles for Instant Setup */}
-      <div className="mt-5 pt-4 border-t border-zinc-100">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-            Quick Start Fresh Workspace
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => handleQuickRoleStart('admin')}
-            disabled={isLoading}
-            className="p-2.5 rounded-2xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200/80 text-left transition-all group cursor-pointer"
-          >
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-900">
-              <ShieldCheck className="w-3.5 h-3.5 text-zinc-700" /> Start as HR Admin
-            </div>
-            <div className="text-[10px] text-zinc-400 mt-0.5 truncate">
-              Full directory, payroll & leaves
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleQuickRoleStart('employee')}
-            disabled={isLoading}
-            className="p-2.5 rounded-2xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200/80 text-left transition-all group cursor-pointer"
-          >
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-900">
-              <User className="w-3.5 h-3.5 text-zinc-700" /> Start as Staff
-            </div>
-            <div className="text-[10px] text-zinc-400 mt-0.5 truncate">
-              Punch in, leaves & payslip
-            </div>
-          </button>
-        </div>
-      </div>
-
       <div className="mt-4 text-center">
         <p className="text-xs text-zinc-500">
-          Want a custom profile?{' '}
+          Already have an account?{' '}
           <button
             type="button"
-            onClick={onFlipToSignUp}
+            onClick={onFlipToSignIn}
             className="font-semibold text-zinc-900 hover:underline inline-flex items-center gap-1 ml-1 cursor-pointer"
           >
-            Create an account
+            ← Back to sign in
           </button>
         </p>
       </div>
