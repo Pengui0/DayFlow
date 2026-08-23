@@ -62,17 +62,15 @@ export function SignInForm({ onFlipToSignUp }: SignInFormProps) {
     setIsLoading(true);
     setAuthError(null);
     try {
-      const email = role === 'admin' ? 'admin@dayflow.io' : 'employee@dayflow.io';
-      const matched = employees.find((e) => e.email.toLowerCase() === email.toLowerCase());
+      const res = await signIn(
+        role === 'admin' ? 'admin@dayflow.io' : 'employee@dayflow.io',
+        'Password123!'
+      );
 
-      if (matched) {
-        useAuthStoreDirect.getState().setSession(
-          { access_token: `token-${matched.id}`, user: matched },
-          matched
-        );
+      if (res.success) {
         navigate('/dashboard');
       } else {
-        setAuthError('Demo account not found locally');
+        setAuthError(res.error || 'Failed to start workspace');
       }
     } catch (err) {
       setAuthError('Could not start workspace');
@@ -80,7 +78,6 @@ export function SignInForm({ onFlipToSignUp }: SignInFormProps) {
       setIsLoading(false);
     }
   };
-
   return (
     <div className="w-full">
       <div className="mb-5 text-center">
